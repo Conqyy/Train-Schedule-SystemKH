@@ -1,0 +1,34 @@
+{
+  "name": "train-schedule-systemkh",
+  "version": "1.0.0",
+  "description": "Train Schedule and Reservation Management System",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Conqyy/Train-Schedule-SystemKH.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Conqyy/Train-Schedule-SystemKH/issues"
+  },
+  "homepage": "https://github.com/Conqyy/Train-Schedule-SystemKH#readme",
+  "dependencies": {
+    "@tailwindcss/postcss": "^4.1.7",
+    "@types/node": "^22.15.18",
+    "@types/react": "^19.1.4",
+    "next": "^15.3.2",
+    "postcss": "^8.5.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "tailwindcss": "^4.1.7",
+    "typescript": "^5.8.3"
+  }
+}
