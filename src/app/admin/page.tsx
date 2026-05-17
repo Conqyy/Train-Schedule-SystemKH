@@ -19,7 +19,17 @@ function StatCard({ icon, label, value, color }: { icon: string; label: string; 
   );
 }
 
-const emptyTrain = { id: "", name: "", destination: "", origin: "", departureTime: "", arrivalTime: "", totalSeats: 0, price: 0, status: "on-time" as const };
+const emptyTrain = {
+  id: "",
+  name: "",
+  destination: "",
+  origin: "",
+  departureTime: "",
+  arrivalTime: "",
+  totalSeats: 0,
+  price: 0,
+  status: "on-time" as "on-time" | "delayed" | "cancelled"
+};
 
 export default function AdminPage() {
   const [trains, setTrains] = useState<Train[]>([]);
@@ -53,6 +63,7 @@ export default function AdminPage() {
 
   const startEdit = (t: Train) => {
     setEditingId(t.id);
+    // @ts-ignore
     setForm({ id: t.id, name: t.name, destination: t.destination, origin: t.origin, departureTime: t.departureTime, arrivalTime: t.arrivalTime, totalSeats: t.totalSeats, price: t.price, status: t.status });
     setActiveTab("manage");
     setFormMsg(null);
@@ -117,12 +128,12 @@ export default function AdminPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead><tr style={{ background: "rgba(148,163,184,0.05)" }}>
-                  {["Reservation ID","Passenger","Train","Seat","Date","Status","Action"].map(h => <th key={h} className="px-6 py-4 text-left font-semibold" style={{ color: "#94a3b8" }}>{h}</th>)}
+                  {["Reservation ID", "Passenger", "Train", "Seat", "Date", "Status", "Action"].map(h => <th key={h} className="px-6 py-4 text-left font-semibold" style={{ color: "#94a3b8" }}>{h}</th>)}
                 </tr></thead>
                 <tbody>{reservations.map((r) => {
                   const train = trains.find(t => t.id === r.trainId);
                   return (<tr key={r.id} style={{ borderTop: "1px solid rgba(148,163,184,0.06)" }}>
-                    <td className="px-6 py-4 font-mono text-xs text-white">{r.id.slice(0,16)}…</td>
+                    <td className="px-6 py-4 font-mono text-xs text-white">{r.id.slice(0, 16)}…</td>
                     <td className="px-6 py-4"><p className="font-medium text-white">{r.passengerName}</p><p className="text-xs" style={{ color: "#64748b" }}>{r.passengerEmail}</p></td>
                     <td className="px-6 py-4 text-white">{train?.name || r.trainId}</td>
                     <td className="px-6 py-4 font-bold text-white">#{r.seatNumber}</td>
@@ -143,7 +154,7 @@ export default function AdminPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr style={{ background: "rgba(148,163,184,0.05)" }}>
-                {["ID","Train Name","Route","Departure","Total Seats","Available","Status","Actions"].map(h => <th key={h} className="px-6 py-4 text-left font-semibold" style={{ color: "#94a3b8" }}>{h}</th>)}
+                {["ID", "Train Name", "Route", "Departure", "Total Seats", "Available", "Status", "Actions"].map(h => <th key={h} className="px-6 py-4 text-left font-semibold" style={{ color: "#94a3b8" }}>{h}</th>)}
               </tr></thead>
               <tbody>{trains.map(t => (
                 <tr key={t.id} style={{ borderTop: "1px solid rgba(148,163,184,0.06)" }}>
@@ -174,39 +185,39 @@ export default function AdminPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="train-id" className="block text-sm font-semibold mb-1 text-white">Train ID</label>
-                <input id="train-id" className="input-field" placeholder="e.g. TR-007" value={form.id} onChange={e => setForm({...form, id: e.target.value})} disabled={!!editingId} required />
+                <input id="train-id" className="input-field" placeholder="e.g. TR-007" value={form.id} onChange={e => setForm({ ...form, id: e.target.value })} disabled={!!editingId} required />
               </div>
               <div>
                 <label htmlFor="train-name" className="block text-sm font-semibold mb-1 text-white">Train Name</label>
-                <input id="train-name" className="input-field" placeholder="e.g. Desert Express" value={form.name} onChange={e => setForm({...form, name: e.target.value})} required />
+                <input id="train-name" className="input-field" placeholder="e.g. Desert Express" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
               </div>
               <div>
                 <label htmlFor="train-origin" className="block text-sm font-semibold mb-1 text-white">Origin</label>
-                <input id="train-origin" className="input-field" placeholder="e.g. Riyadh" value={form.origin} onChange={e => setForm({...form, origin: e.target.value})} required />
+                <input id="train-origin" className="input-field" placeholder="e.g. Riyadh" value={form.origin} onChange={e => setForm({ ...form, origin: e.target.value })} required />
               </div>
               <div>
                 <label htmlFor="train-destination" className="block text-sm font-semibold mb-1 text-white">Destination</label>
-                <input id="train-destination" className="input-field" placeholder="e.g. Tabuk" value={form.destination} onChange={e => setForm({...form, destination: e.target.value})} required />
+                <input id="train-destination" className="input-field" placeholder="e.g. Tabuk" value={form.destination} onChange={e => setForm({ ...form, destination: e.target.value })} required />
               </div>
               <div>
                 <label htmlFor="train-departure" className="block text-sm font-semibold mb-1 text-white">Departure Time</label>
-                <input id="train-departure" type="time" className="input-field" value={form.departureTime} onChange={e => setForm({...form, departureTime: e.target.value})} required />
+                <input id="train-departure" type="time" className="input-field" value={form.departureTime} onChange={e => setForm({ ...form, departureTime: e.target.value })} required />
               </div>
               <div>
                 <label htmlFor="train-arrival" className="block text-sm font-semibold mb-1 text-white">Arrival Time</label>
-                <input id="train-arrival" type="time" className="input-field" value={form.arrivalTime} onChange={e => setForm({...form, arrivalTime: e.target.value})} required />
+                <input id="train-arrival" type="time" className="input-field" value={form.arrivalTime} onChange={e => setForm({ ...form, arrivalTime: e.target.value })} required />
               </div>
               <div>
                 <label htmlFor="train-seats" className="block text-sm font-semibold mb-1 text-white">Total Seats</label>
-                <input id="train-seats" type="number" min="1" className="input-field" value={form.totalSeats || ""} onChange={e => setForm({...form, totalSeats: parseInt(e.target.value) || 0})} required />
+                <input id="train-seats" type="number" min="1" className="input-field" value={form.totalSeats || ""} onChange={e => setForm({ ...form, totalSeats: parseInt(e.target.value) || 0 })} required />
               </div>
               <div>
                 <label htmlFor="train-price" className="block text-sm font-semibold mb-1 text-white">Price (SAR)</label>
-                <input id="train-price" type="number" min="0" className="input-field" value={form.price || ""} onChange={e => setForm({...form, price: parseInt(e.target.value) || 0})} required />
+                <input id="train-price" type="number" min="0" className="input-field" value={form.price || ""} onChange={e => setForm({ ...form, price: parseInt(e.target.value) || 0 })} required />
               </div>
               <div>
                 <label htmlFor="train-status" className="block text-sm font-semibold mb-1 text-white">Status</label>
-                <select id="train-status" className="input-field" value={form.status} onChange={e => setForm({...form, status: e.target.value as Train["status"]})}>
+                <select id="train-status" className="input-field" value={form.status} onChange={e => setForm({ ...form, status: e.target.value as Train["status"] })}>
                   <option value="on-time">On Time</option>
                   <option value="delayed">Delayed</option>
                   <option value="cancelled">Cancelled</option>
