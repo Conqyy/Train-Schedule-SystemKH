@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Train } from "@/models/types";
+import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { getTrains } from "@/controllers/trainService";
+import LiveStatusWidget from "@/components/LiveStatusWidget";
 
 /* ========== Hero Section ========== */
 function HeroSection() {
@@ -111,6 +113,32 @@ function HeroSection() {
         </div>
       </div>
     </section>
+  );
+}
+
+/* ========== Data Source Badge ========== */
+function DataSourceBadge({ source }: { source: "supabase" | "local" }) {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "0.35rem",
+        fontSize: "0.7rem",
+        fontWeight: 700,
+        padding: "0.25rem 0.65rem",
+        borderRadius: "999px",
+        color: source === "supabase" ? "#4ade80" : "#fbbf24",
+        background: source === "supabase" ? "rgba(34,197,94,0.1)" : "rgba(245,158,11,0.1)",
+        border: `1px solid ${source === "supabase" ? "rgba(34,197,94,0.2)" : "rgba(245,158,11,0.2)"}`,
+      }}
+    >
+      <span style={{
+        width: "6px", height: "6px", borderRadius: "50%",
+        background: source === "supabase" ? "#4ade80" : "#fbbf24",
+      }} />
+      {source === "supabase" ? "Supabase مباشر" : "بيانات محلية"}
+    </span>
   );
 }
 
@@ -291,15 +319,58 @@ function TrainCard({ train }: { train: Train }) {
   );
 }
 
+/* ========== Supabase → Train mapper ========== */
+function mapSupabaseRow(row: Record<string, unknown>): Train {
+  return {
+    id: row.id as string,
+    name: row.train_name as string,
+    origin: row.departure_station as string,
+    destination: row.arrival_station as string,
+    departureTime: row.departure_time as string,
+    arrivalTime: row.arrival_time as string,
+    totalSeats: row.total_seats as number,
+    availableSeats: row.available_seats as number,
+    price: row.price as number,
+    status: row.status as Train["status"],
+  };
+}
+
 /* ========== Home Page ========== */
 export default function HomePage() {
   const [trains, setTrains] = useState<Train[]>([]);
   const [search, setSearch] = useState("");
   const [mounted, setMounted] = useState(false);
+  const [dataSource, setDataSource] = useState<"supabase" | "local">("local");
 
   useEffect(() => {
     setMounted(true);
-    setTrains(getTrains());
+
+    async function loadTrains() {
+      // Try Supabase first
+      if (isSupabaseConfigured()) {
+        try {
+          const { data, error } = await supabase
+            .from("trains")
+            .select("*")
+            .order("departure_time", { ascending: true });
+
+          if (!error && data && data.length > 0) {
+            setTrains(data.map(mapSupabaseRow));
+            setDataSource("supabase");
+            return;
+          }
+          console.warn("Supabase returned no data or error:", error?.message);
+        } catch (err) {
+          console.warn("Supabase fetch failed, falling back to local data:", err);
+        }
+      }
+
+      // Fallback to localStorage mock data
+      setTrains(getTrains());
+      setDataSource("local");
+    }
+
+    loadTrains();
   }, []);
 
   const filtered = trains.filter(
@@ -329,20 +400,26 @@ export default function HomePage() {
       {/* Hero */}
       <HeroSection />
 
+      {/* Live Status Widget */}
+      <LiveStatusWidget />
+
       {/* Schedules Section */}
       <section id="schedules" className="scroll-mt-24">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
           <div>
-            <h2
-              className="text-2xl md:text-3xl font-black mb-1"
-              style={{
-                background: "linear-gradient(135deg, #ffffff, #94a3b8)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-              }}
-            >
-              جداول الرحلات المتاحة
-            </h2>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.25rem" }}>
+              <h2
+                className="text-2xl md:text-3xl font-black"
+                style={{
+                  background: "linear-gradient(135deg, #ffffff, #94a3b8)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                }}
+              >
+                جداول الرحلات المتاحة
+              </h2>
+              <DataSourceBadge source={dataSource} />
+            </div>
             <p className="text-sm" style={{ color: "#64748b" }}>
               عرض {filtered.length} من {trains.length} رحلة
             </p>
