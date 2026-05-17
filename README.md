@@ -22,7 +22,7 @@ A full-featured Arabic (RTL) web application for managing train schedules, ticke
 | **❌ Cancellation** | Cancel reservations and automatically restore seat availability |
 | **🌍 Arabic RTL** | Full Right-to-Left Arabic interface with Tajawal font |
 
----
+----
 
 ## 🏗️ Architecture
 
