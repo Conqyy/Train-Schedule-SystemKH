@@ -6,6 +6,7 @@ import {
   getTrains, getReservations, cancelReservation, resetAllData,
   getDashboardStats, DashboardStats, addTrain, updateTrain, deleteTrain,
 } from "@/controllers/trainService";
+import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
 function StatCard({ icon, label, value, color }: { icon: string; label: string; value: string | number; color: string }) {
   return (
@@ -41,24 +42,149 @@ export default function AdminPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formMsg, setFormMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
-  const refreshData = () => { setTrains(getTrains()); setReservations(getReservations()); setStats(getDashboardStats()); };
+  const refreshData = async () => {
+    if (isSupabaseConfigured()) {
+      try {
+        const [{ data: trainsData }, { data: resData }] = await Promise.all([
+          supabase.from("trains").select("*").order("departure_time", { ascending: true }),
+          supabase.from("reservations").select("*").order("booking_date", { ascending: false })
+        ]);
+        let ts = getTrains();
+        let rs = getReservations();
+        if (trainsData) {
+          ts = trainsData.map((row: any) => ({
+            id: row.id,
+            name: row.train_name,
+            origin: row.departure_station,
+            destination: row.arrival_station,
+            departureTime: row.departure_time,
+            arrivalTime: row.arrival_time,
+            totalSeats: row.total_seats,
+            availableSeats: row.available_seats,
+            price: row.price,
+            status: row.status || "on-time",
+          }));
+        }
+        if (resData) {
+          rs = resData.map((row: any) => ({
+            id: row.id,
+            trainId: row.train_id,
+            passengerName: row.passenger_name,
+            passengerEmail: row.passenger_email,
+            seatNumber: row.seat_number,
+            bookingDate: row.booking_date,
+            status: row.status,
+          }));
+        }
+        setTrains(ts);
+        setReservations(rs);
+        
+        const totalCapacity = ts.reduce((sum, t) => sum + t.totalSeats, 0);
+        const totalAvailable = ts.reduce((sum, t) => sum + t.availableSeats, 0);
+        const totalBooked = totalCapacity - totalAvailable;
+        const activeReservations = rs.filter((r) => r.status === "confirmed").length;
+        const cancelledReservations = rs.filter((r) => r.status === "cancelled").length;
+        setStats({
+          totalTrains: ts.length,
+          totalCapacity,
+          totalBooked,
+          totalAvailable,
+          activeReservations,
+          cancelledReservations,
+          occupancyRate: totalCapacity > 0 ? Math.round((totalBooked / totalCapacity) * 100) : 0,
+        });
+        return;
+      } catch (e) {
+        console.error("Error loading from Supabase", e);
+      }
+    }
+    
+    setTrains(getTrains());
+    setReservations(getReservations());
+    setStats(getDashboardStats());
+  };
+
   useEffect(() => { setMounted(true); refreshData(); }, []);
 
-  const handleCancel = (id: string) => { const r = cancelReservation(id); if (r.success) refreshData(); alert(r.message); };
-  const handleReset = () => { if (window.confirm("Reset all data to defaults?")) { resetAllData(); refreshData(); } };
+  const handleCancel = async (id: string) => { 
+    if (isSupabaseConfigured()) {
+      const res = reservations.find(r => r.id === id);
+      if (res && res.status !== "cancelled") {
+        await supabase.from("reservations").update({ status: "cancelled" }).eq("id", id);
+        const train = trains.find(t => t.id === res.trainId);
+        if (train) {
+          await supabase.from("trains").update({ available_seats: train.availableSeats + 1 }).eq("id", train.id);
+        }
+        await refreshData();
+        alert("Reservation cancelled successfully.");
+      }
+    } else {
+      const r = cancelReservation(id); 
+      if (r.success) await refreshData(); 
+      alert(r.message); 
+    }
+  };
 
-  const handleTrainSubmit = (e: React.FormEvent) => {
+  const handleReset = () => { 
+    if (window.confirm("Reset all data to defaults?")) { 
+      if (isSupabaseConfigured()) {
+        alert("Cannot reset Supabase data automatically. Please use the Supabase dashboard.");
+      } else {
+        resetAllData(); 
+        refreshData(); 
+      }
+    } 
+  };
+
+  const handleTrainSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormMsg(null);
-    let result;
-    if (editingId) {
-      const { id, ...updates } = form;
-      result = updateTrain(editingId, updates);
+    if (isSupabaseConfigured()) {
+      if (editingId) {
+        const train = trains.find(t => t.id === editingId);
+        const booked = train ? train.totalSeats - train.availableSeats : 0;
+        const newAvailable = Math.max(0, form.totalSeats - booked);
+        const { error } = await supabase.from("trains").update({
+          train_name: form.name,
+          departure_station: form.origin,
+          arrival_station: form.destination,
+          departure_time: form.departureTime,
+          arrival_time: form.arrivalTime,
+          total_seats: form.totalSeats,
+          available_seats: newAvailable,
+          price: form.price,
+          status: form.status,
+        }).eq("id", editingId);
+        if (error) { setFormMsg({ ok: false, text: error.message }); return; }
+        setFormMsg({ ok: true, text: "Train updated successfully." });
+      } else {
+        const { error } = await supabase.from("trains").insert({
+          id: form.id,
+          train_name: form.name,
+          departure_station: form.origin,
+          arrival_station: form.destination,
+          departure_time: form.departureTime,
+          arrival_time: form.arrivalTime,
+          total_seats: form.totalSeats,
+          available_seats: form.totalSeats,
+          price: form.price,
+          status: form.status,
+        });
+        if (error) { setFormMsg({ ok: false, text: error.message }); return; }
+        setFormMsg({ ok: true, text: "Train added successfully." });
+      }
+      setForm(emptyTrain); setEditingId(null); await refreshData();
     } else {
-      result = addTrain(form);
+      let result;
+      if (editingId) {
+        const { id, ...updates } = form;
+        result = updateTrain(editingId, updates);
+      } else {
+        result = addTrain(form);
+      }
+      setFormMsg({ ok: result.success, text: result.message });
+      if (result.success) { setForm(emptyTrain); setEditingId(null); await refreshData(); }
     }
-    setFormMsg({ ok: result.success, text: result.message });
-    if (result.success) { setForm(emptyTrain); setEditingId(null); refreshData(); }
   };
 
   const startEdit = (t: Train) => {
@@ -69,11 +195,17 @@ export default function AdminPage() {
     setFormMsg(null);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (!window.confirm("Delete this cancelled train?")) return;
-    const r = deleteTrain(id);
-    alert(r.message);
-    if (r.success) refreshData();
+    if (isSupabaseConfigured()) {
+      const { error } = await supabase.from("trains").delete().eq("id", id);
+      if (error) alert(error.message);
+      else { alert("Train deleted successfully."); await refreshData(); }
+    } else {
+      const r = deleteTrain(id);
+      alert(r.message);
+      if (r.success) await refreshData();
+    }
   };
 
   if (!mounted || !stats) return <div className="flex items-center justify-center min-h-[60vh]"><p className="text-xl animate-pulse" style={{ color: "#94a3b8" }}>Loading dashboard...</p></div>;

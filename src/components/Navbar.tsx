@@ -456,23 +456,7 @@ export default function Navbar() {
                 );
               })}
 
-              <div style={{ height: "1px", background: "rgba(71,85,105,0.2)", margin: "0.75rem 0" }} />
 
-              <button
-                onClick={() => setSidebarOpen(false)}
-                style={{
-                  display: "flex", alignItems: "center", gap: "0.75rem",
-                  padding: "0.75rem 1rem", borderRadius: "12px",
-                  color: "#94a3b8", background: "transparent",
-                  fontWeight: 600, fontSize: "0.88rem",
-                  textDecoration: "none", transition: "all 0.2s",
-                  border: "none", cursor: "pointer", width: "100%",
-                  fontFamily: "inherit", textAlign: "right",
-                }}
-              >
-                <span style={{ display: "flex", opacity: 0.6 }}>{settingsLink.icon}</span>
-                {settingsLink.label}
-              </button>
             </div>
 
             {/* Sidebar Footer - Logout */}
