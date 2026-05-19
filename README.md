@@ -227,4 +227,4 @@ ISC
 
 ---
 
-**جداول قطارات الرياض** · Riyadh Train Schedules v2.0 🇸🇦 🚀
+**جداول قطارات الرياض** · Riyadh Train Schedules v2.0 🇸🇦 🚀. 
